@@ -23,36 +23,45 @@ itself, and hands everything else back to VoiceAttack:
 
 ## Requirements
 
-- Windows, [VoiceAttack](https://voiceattack.com/) with **plugin support enabled**
+- Windows, [VoiceAttack](https://voiceattack.com/) **2.x** with **plugin support enabled**
   (Settings → General ▸ *Enable plugin support*).
-- To build: the **.NET SDK** (`dotnet`) *or* Visual Studio 2022 with the ".NET Framework 4.8"
-  targeting pack. The project targets **.NET Framework 4.8** because VoiceAttack is a
-  .NET Framework app and can only load Framework assemblies.
+- To build: the **.NET SDK** (`dotnet`). The project targets **.NET 8** (`net8.0-windows`)
+  because VoiceAttack 2.x runs on .NET 8 (`Microsoft.WindowsDesktop.App` 8.0). A .NET Framework
+  build will load but fail to resolve `System.IO.Ports` at runtime.
+
+> Older VoiceAttack 1.x runs on .NET Framework — if that's your version, retarget the project to
+> `net48` and add the `Microsoft.NETFramework.ReferenceAssemblies` package instead. Check your
+> version in VoiceAttack ▸ About.
 
 ## Build
 
 ```powershell
-# from the repo root
-dotnet build -c Release
+# from the repo root — publish for Windows so the correct System.IO.Ports.dll is included
+dotnet publish DeskAgentVA/DeskAgentVA.csproj -c Release -r win-x64 --self-contained false -o DeskAgentVA/publish
 ```
 
-The `Microsoft.NETFramework.ReferenceAssemblies` NuGet reference means you do **not** need a
-full Visual Studio install or the standalone targeting pack — the .NET SDK alone can build the
-net48 DLL. (Visual Studio users can just open `DeskAgentVA.sln` and build.)
+`System.IO.Ports` is not part of the .NET shared framework and VoiceAttack doesn't ship it, so it
+must travel with the plugin. Publishing for `win-x64` places the correct Windows build of
+`System.IO.Ports.dll` next to the plugin. (Visual Studio users can open `DeskAgentVA.sln`; just
+publish rather than plain-build so the dependency is emitted.)
 
-Output: `DeskAgentVA\bin\Release\DeskAgentVA.dll`.
+Output folder `DeskAgentVA\publish\` contains what you deploy.
 
 ## Install into VoiceAttack
 
-1. Find your VoiceAttack **Apps** folder. Default is:
-   `C:\Program Files\VoiceAttack\Apps\`
-   (or, for the Microsoft Store version, `Documents\VoiceAttack\Apps\`).
-2. Create a subfolder for the plugin and copy the DLL into it:
-   `...\VoiceAttack\Apps\DeskAgentVA\DeskAgentVA.dll`
-   Each plugin **must** live in its own subfolder.
+1. Find your VoiceAttack **Apps** folder. For VoiceAttack 2.x it's:
+   `%APPDATA%\VoiceAttack2\Apps\` (i.e. `C:\Users\<you>\AppData\Roaming\VoiceAttack2\Apps\`).
+2. Create a subfolder and copy **these files** from `DeskAgentVA\publish\` into it:
+   - `DeskAgentVA.dll`
+   - `System.IO.Ports.dll`  ← required; the plugin won't scan ports without it
+   - `DeskAgentVA.deps.json`
+
+   → `...\VoiceAttack2\Apps\DeskAgentVA\`. Each plugin **must** live in its own subfolder.
 3. In VoiceAttack, make sure **Enable plugin support** is ticked, then restart VoiceAttack.
    You should see `Desk Agent (Switch/LED Bridge)` initialise in the VoiceAttack log, followed
    by lines like `Opened COM5, listening for a board...` and `Device 1 connected on COM5.`
+   (If you instead see `Port scan error: Could not load ... System.IO.Ports`, the
+   `System.IO.Ports.dll` didn't make it into the folder.)
 
 The plugin auto‑discovers boards on all COM ports (rescan every 3 s), identifies each board by
 the `ID` it reports, and reconnects automatically when a board is plugged/unplugged.
@@ -239,8 +248,11 @@ Board `ID`s come from the `#define ID` in each sketch (e.g. Board24 = 1).
 ## Troubleshooting
 
 - **Plugin doesn't load / not listed** — Enable plugin support in VoiceAttack settings, confirm
-  the DLL is in its own subfolder under `Apps\`, and that it's the **net48** build. Check the
-  VoiceAttack log at startup.
+  the DLL is in its own subfolder under `Apps\`, and that it's the **net8.0** build (for
+  VoiceAttack 2.x). Check the VoiceAttack log at startup.
+- **`Port scan error: Could not load ... System.IO.Ports`** — `System.IO.Ports.dll` (and
+  `DeskAgentVA.deps.json`) must sit next to `DeskAgentVA.dll` in the plugin folder. Re-copy them
+  from `DeskAgentVA\publish\`.
 - **`Device N not connected`** — the board hasn't sent a frame yet, its `ID` differs from `N`,
   or another program (Arduino Serial Monitor, the old Desk Agent) holds the COM port. Only one
   app can own a serial port at a time.
