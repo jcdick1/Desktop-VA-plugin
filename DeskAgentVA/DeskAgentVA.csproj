@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>DeskAgentVA</AssemblyName>
+    <RootNamespace>DeskAgentVA</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <!-- VoiceAttack loads the DLL straight from its Apps folder; keep the path flat. -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Deterministic>true</Deterministic>
+    <Version>1.0.0</Version>
+    <Company>jcdick1</Company>
+    <Product>Desk Agent VoiceAttack Plugin</Product>
+    <Description>Bridges the Switch-LED Arduino boards into VoiceAttack (ported from Desk_Agent).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Required for the `dynamic` vaProxy calls on .NET Framework (SDK-style projects
+         don't reference Microsoft.CSharp by default). -->
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Lets `dotnet build` target .NET Framework 4.8 without a full VS / targeting pack.
+         SerialPort (System.IO.Ports) lives in System.dll on .NET Framework, referenced by default. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
